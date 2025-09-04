@@ -3,37 +3,20 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import os
 
 st.set_page_config(page_title="Cirrhosis Survival Prediction", layout="wide")
 
 st.title('🔮 การคาดการณ์อัตราการรอดชีวิตของผู้ป่วยโรคตับแข็งด้วย K-Nearest Neighbor')
 
 # -------------------------------
-# โหลดข้อมูล (ใช้ relative path)
+# โหลดข้อมูล
 # -------------------------------
 @st.cache_data
 def load_data():
-    # หา path ของไฟล์ที่อยู่ข้างๆ app.py
-    root_dir = os.path.dirname(os.path.abspath(__file__))
-    file_path = os.path.join(root_dir, "Data", "cirrhosis.csv")
+    return pd.read_csv("./Data/cirrhosis.csv")
 
-    # แสดง path ที่โปรแกรมจะพยายามอ่าน
-    st.write(f"📂 กำลังโหลดไฟล์จาก: {file_path}")
+dt = load_data()
 
-    # อ่าน CSV
-    return pd.read_csv(file_path)
-
-# โหลดข้อมูล
-try:
-    dt = load_data()
-except FileNotFoundError:
-    st.error("❌ ไม่พบไฟล์ cirrhosis.csv กรุณาตรวจสอบว่าอยู่ในโฟลเดอร์ 'Data' ข้างๆ app.py")
-    st.stop()
-
-# -------------------------------
-# แสดงตัวอย่างข้อมูล
-# -------------------------------
 st.subheader("👀 ข้อมูลตัวอย่าง")
 col1, col2 = st.columns(2)
 with col1:
@@ -66,13 +49,18 @@ fig, ax = plt.subplots()
 sns.boxplot(data=dt, x=target_col, y=feature, ax=ax)
 st.pyplot(fig)
 
+if st.checkbox("✅ แสดง Pairplot (ใช้เวลาประมวลผล)"):
+    st.write("### 🌺 Pairplot: การกระจายของข้อมูลทั้งหมด")
+    fig2 = sns.pairplot(dt, hue=target_col)
+    st.pyplot(fig2)
+
 # -------------------------------
 # Preprocess
 # -------------------------------
 def preprocess(df):
     df2 = df.copy()
 
-    # จัดการ categorical
+    # จัดการ categorical ก่อน
     for col in df2.columns:
         if df2[col].dtype == "object":
             df2[col] = df2[col].astype("category")
@@ -95,8 +83,7 @@ y = dt_proc[target_col]
 # -------------------------------
 # Train Model
 # -------------------------------
-k = st.slider("เลือกค่า K สำหรับ KNN", 1, 15, 3)
-model = KNeighborsClassifier(n_neighbors=k)
+model = KNeighborsClassifier(n_neighbors=3)
 model.fit(X, y)
 
 # -------------------------------
@@ -118,12 +105,9 @@ st.subheader("🔍 ผลการทำนาย")
 prediction = model.predict(x_input_proc)[0]
 prob = model.predict_proba(x_input_proc)[0]
 
-labels = {0: "เสียชีวิต", 1: "รอดชีวิต"}
-
-st.write(f"ผลการทำนาย: **{labels[prediction]}**")
-st.write(f"ความมั่นใจ: {prob[prediction]*100:.2f}%")
-
-if prediction == 1:   # 1 = รอดชีวิต
+if prediction == 1:   # สมมติ 1 = รอดชีวิต
     st.success(f"✅ ผู้ป่วยมีโอกาสรอดชีวิตสูง (ความมั่นใจ {prob[1]*100:.2f}%)")
+    st.image("./img/12.jpg", width=300)
 else:
     st.error(f"⚠️ ผู้ป่วยมีความเสี่ยงสูงต่อการเสียชีวิต (ความมั่นใจ {prob[0]*100:.2f}%)")
+    st.image("./img/13.jpg", width=300)
