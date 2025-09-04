@@ -13,7 +13,6 @@ st.header("🌳 Decision Tree สำหรับการทำนายโร�
 # โหลดข้อมูล
 # -------------------------------
 try:
-    # หา path ของโฟลเดอร์หลัก (parent ของ pages/)
     root_dir = os.path.dirname(os.path.dirname(__file__))
     file_path = os.path.join(root_dir, "Data", "cirrhosis.csv")
 
@@ -21,15 +20,15 @@ try:
     st.subheader("👀 ข้อมูลตัวอย่าง")
     st.write(df.head(10))
 except FileNotFoundError:
-    st.error("❌ ไม่พบไฟล์ cirrhosis.csv กรุณาตรวจสอบว่าอยู่ในโฟลเดอร์ 'Data' ข้างๆ project")
+    st.error("❌ ไม่พบไฟล์ cirrhosis.csv กรุณาตรวจสอบว่าอยู่ในโฟลเดอร์ 'Data'")
     st.stop()
 
 # -------------------------------
 # กำหนด target และ features
 # -------------------------------
-target_col = "Status"  # สมมติว่าคอลัมน์นี้คือผลลัพธ์ (0=เสียชีวิต, 1=รอดชีวิต)
+target_col = "Status"  # คอลัมน์ผลลัพธ์
 if target_col not in df.columns:
-    st.error(f"⚠️ ไม่พบคอลัมน์ '{target_col}' ใน dataset กรุณาตรวจสอบไฟล์ cirrhosis.csv")
+    st.error(f"⚠️ ไม่พบคอลัมน์ '{target_col}' ใน dataset")
     st.stop()
 
 X = df.drop(target_col, axis=1)
@@ -58,51 +57,41 @@ model = DecisionTreeClassifier(random_state=42, max_depth=4)
 dtree = model.fit(x_train, y_train)
 
 # -------------------------------
-# Input form จากผู้ใช้
-# -------------------------------
-st.subheader("📝 กรอกข้อมูลผู้ป่วยเพื่อพยากรณ์")
-
-user_input = {}
-for col in X.columns:
-    if X[col].dtype in ["int64", "float64"]:
-        user_input[col] = st.number_input(
-            f"{col}", float(X[col].min()), float(X[col].max()), float(X[col].mean())
-        )
-    else:
-        options = list(df[col].astype("category").cat.categories)
-        user_input[col] = st.selectbox(f"{col}", options)
-
-# -------------------------------
-# พยากรณ์จาก input ผู้ใช้
-# -------------------------------
-if st.button("พยากรณ์"):
-    input_df = pd.DataFrame([user_input])
-
-    # preprocess ให้ตรงกับ X
-    for col in input_df.columns:
-        if input_df[col].dtype == "object":
-            input_df[col] = input_df[col].astype("category").cat.codes
-    input_df = input_df.reindex(columns=X.columns, fill_value=0)
-
-    y_pred = dtree.predict(input_df)[0]
-    labels = {0: "เสียชีวิต", 1: "รอดชีวิต"}
-    st.success(f"🔮 ผลการพยากรณ์: {labels[y_pred]}")
-
-# -------------------------------
-# ความแม่นยำของโมเดล
+# ประเมินความแม่นยำ
 # -------------------------------
 y_predict = dtree.predict(x_test)
 score = accuracy_score(y_test, y_predict)
 st.write(f"🎯 ความแม่นยำของโมเดล: {score*100:.2f} %")
 
 # -------------------------------
-# แสดงกราฟโครงสร้าง Decision Tree
+# ทำนายผู้ป่วยจาก dataset จริง (สุ่ม 1 แถว)
 # -------------------------------
+st.subheader("🔍 ตัวอย่างการทำนายจากข้อมูลจริง")
+
+rand_row = df.sample(1, random_state=42)
+st.write("ข้อมูลผู้ป่วย (ก่อนแปลง):")
+st.write(rand_row)
+
+# preprocess แถวนี้ให้ตรงกับ X
+row_proc = rand_row.drop(columns=[target_col])
+for col in row_proc.columns:
+    if row_proc[col].dtype == "object":
+        row_proc[col] = row_proc[col].astype("category").cat.codes
+row_proc = row_proc.reindex(columns=X.columns, fill_value=0)
+
+pred = dtree.predict(row_proc)[0]
+st.success(f"✅ ผลการทำนาย: {pred}")
+
+# -------------------------------
+# แสดงโครงสร้าง Decision Tree
+# -------------------------------
+st.subheader("🌳 โครงสร้าง Decision Tree")
+
 fig, ax = plt.subplots(figsize=(16, 10))
 tree.plot_tree(
     dtree,
     feature_names=X.columns,
-    class_names=["เสียชีวิต", "รอดชีวิต"],
+    class_names=[str(c) for c in dtree.classes_],
     filled=True,
     ax=ax,
 )
