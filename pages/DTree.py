@@ -5,37 +5,87 @@ from sklearn.tree import DecisionTreeClassifier
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score
+import os
 
-st.header("Decision Tree for classification")
-df = pd.read_csv("./data/iris.csv")
+st.header("🌳 Decision Tree สำหรับการทำนายโรคตับแข็ง")
+
+# -------------------------------
+# โหลดข้อมูล
+# -------------------------------
+file_path = os.path.join(os.path.dirname(__file__), "Data", "cirrhosis.csv")
+df = pd.read_csv(file_path)
+st.subheader("👀 ข้อมูลตัวอย่าง")
 st.write(df.head(10))
 
-features=['sepal.length', 'sepal.width', 'petal.length', 'petal.width']
-X = df.drop('variety',axis=1)
-y = df['variety']
+# -------------------------------
+# กำหนด target และ features
+# -------------------------------
+target_col = "Status"  # สมมติว่าคอลัมน์นี้คือผลลัพธ์ (0=เสียชีวิต, 1=รอดชีวิต)
+if target_col not in df.columns:
+    st.error(f"⚠️ ไม่พบคอลัมน์ '{target_col}' ใน dataset กรุณาตรวจสอบไฟล์ cirrhosis.csv")
+    st.stop()
 
-x_train,x_test,y_train,y_test =train_test_split(X,y,test_size=0.3,random_state=200)
-ModelDtree = DecisionTreeClassifier()
-dtree =ModelDtree.fit(x_train,y_train)
-st.subheader("กรุณาป้อนข้อมูลเพื่อพยากรณ์")
-spW=st.number_input('Insert sepalwidth')
-spL=st.number_input('Insert sepallength')
-ptW=st.number_input('Insert petalwidth')
-ptL=st.number_input('Insert petallength')
+X = df.drop(target_col, axis=1)
+y = df[target_col]
+
+# -------------------------------
+# จัดการ Missing values
+# -------------------------------
+for col in X.columns:
+    if X[col].dtype == "object":
+        X[col] = X[col].fillna("Unknown").astype("category").cat.codes
+    else:
+        X[col] = X[col].fillna(X[col].mean())
+
+# -------------------------------
+# แบ่งข้อมูล train / test
+# -------------------------------
+x_train, x_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=200)
+
+# -------------------------------
+# สร้างโมเดล Decision Tree
+# -------------------------------
+model = DecisionTreeClassifier(random_state=42, max_depth=4)
+dtree = model.fit(x_train, y_train)
+
+# -------------------------------
+# Input form จากผู้ใช้
+# -------------------------------
+st.subheader("📝 กรอกข้อมูลผู้ป่วยเพื่อพยากรณ์")
+
+user_input = {}
+for col in X.columns:
+    if X[col].dtype in ["int64", "float64"]:
+        user_input[col] = st.number_input(f"{col}", float(X[col].min()), float(X[col].max()), float(X[col].mean()))
+    else:
+        options = list(df[col].astype("category").cat.categories)
+        user_input[col] = st.selectbox(f"{col}", options)
+
+# -------------------------------
+# พยากรณ์จาก input ผู้ใช้
+# -------------------------------
 if st.button("พยากรณ์"):
-    x_input=[[spW,spL,ptW,ptL]] # ใส่ข้อมูลสำหรับการจำแนกข้อมูล
-    y_predict2=dtree.predict(x_input)
-    st.write(y_predict2)
-    st.button("ไม่พยากรณ์")
-else:
-    st.button("ไม่พยากรณ์")
+    input_df = pd.DataFrame([user_input])
+    # preprocess ให้ตรงกับ X
+    for col in input_df.columns:
+        if input_df[col].dtype == "object":
+            input_df[col] = input_df[col].astype("category").cat.codes
+    input_df = input_df.reindex(columns=X.columns, fill_value=0)
 
-y_predict=dtree.predict(x_test)   
-score = accuracy_score(y_test, y_predict)  
-st.write(f'ความแม่นยำในการพยากรณ์{(score*100)} %')  
+    y_pred = dtree.predict(input_df)[0]
+    labels = {0: "เสียชีวิต", 1: "รอดชีวิต"}
+    st.success(f"ผลการพยากรณ์: {labels[y_pred]}")
 
-fig, ax = plt.subplots(figsize=(12, 8))
-tree.plot_tree(dtree, feature_names=features, ax=ax)
+# -------------------------------
+# ความแม่นยำ
+# -------------------------------
+y_predict = dtree.predict(x_test)
+score = accuracy_score(y_test, y_predict)
+st.write(f"🎯 ความแม่นยำของโมเดล: {score*100:.2f} %")
 
+# -------------------------------
+# แสดงกราฟโครงสร้าง Decision Tree
+# -------------------------------
+fig, ax = plt.subplots(figsize=(16, 10))
+tree.plot_tree(dtree, feature_names=X.columns, class_names=["เสียชีวิต", "รอดชีวิต"], filled=True, ax=ax)
 st.pyplot(fig)
-#tree.plot_tree(dtree, feature_names=features)
