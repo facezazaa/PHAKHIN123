@@ -1,36 +1,54 @@
-from sklearn.model_selection import train_test_split
 from sklearn.naive_bayes import GaussianNB
-#from sklearn import datasets
-#from sklearn import metrics
-
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
 
-# โหลดข้อมูล Iris
-df = pd.read_csv("./Data/cirrhosis.csv")
-X = df.drop('variety',axis=1)
-y = df['variety']
+st.set_page_config(page_title="Cirrhosis Survival Prediction - Naive Bayes", layout="wide")
 
-# แบ่งข้อมูลเป็นชุดฝึกและชุดทดสอบ
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+st.title('🧠 การคาดการณ์อัตราการรอดชีวิตของผู้ป่วยโรคตับแข็งด้วย Naive Bayes')
 
-# สร้างและฝึกโมเดล Naive Bayes (ในกรณีของ Iris จะใช้ Gaussian Naive Bayes)
-clf = GaussianNB()
-clf.fit(X_train, y_train)
+# -------------------------------
+# โหลดข้อมูล
+# -------------------------------
+@st.cache_data
+def load_data():
+    return pd.read_csv("./Data/cirrhosis.csv")
 
-# ทดสอบโมเดล
-#y_pred = clf.predict(X_test)
+df = load_data()
 
-st.subheader("กรุณาป้อนข้อมูลเพื่อพยากรณ์")
-spW=st.number_input('Insert sepalwidth')
-spL=st.number_input('Insert sepallength')
-ptW=st.number_input('Insert petalwidth')
-ptL=st.number_input('Insert petallength')
+st.subheader("👀 ข้อมูลตัวอย่าง")
+col1, col2 = st.columns(2)
+with col1:
+    st.write("ข้อมูลส่วนแรก 10 แถว")
+    st.write(df.head(10))
+with col2:
+    st.write("ข้อมูลส่วนสุดท้าย 10 แถว")
+    st.write(df.tail(10))
 
-if st.button("พยากรณ์"):
-    x_input=[[spW,spL,ptW,ptL]] # ใส่ข้อมูลสำหรับการจำแนกข้อมูล
-    y_predict2=clf.predict(x_input)
-    st.write(y_predict2)
-    st.button("ไม่พยากรณ์")
-else:
-    st.button("ไม่พยากรณ์")
+# -------------------------------
+# ตรวจสอบคอลัมน์เป้าหมาย
+# -------------------------------
+target_col = "Status"   # 👈 แก้ตรงนี้ให้ตรงกับชื่อคอลัมน์ target ของคุณ
+
+if target_col not in df.columns:
+    st.error(f"⚠️ ไม่พบคอลัมน์ '{target_col}' กรุณาตรวจสอบชื่อคอลัมน์อีกครั้ง")
+    st.write("📌 คอลัมน์ทั้งหมด:", df.columns.tolist())
+    st.stop()
+
+# -------------------------------
+# สถิติพื้นฐาน
+# -------------------------------
+st.subheader("📈 สถิติพื้นฐานของข้อมูล")
+st.write(df.describe(include="all"))
+
+# -------------------------------
+# เลือกฟีเจอร์และแสดงกราฟ
+# -------------------------------
+st.subheader("📌 เลือกฟีเจอร์เพื่อดูการกระจายข้อมูล")
+feature = st.selectbox("เลือกฟีเจอร์", [c for c in df.columns if c != target_col])
+
+st.write(f"### 🎯 Boxplot: {feature} เทียบกับสถานะผู้ป่วย")
+fig, ax = plt.subplots()
+sns.boxplot(data=df,
+)
