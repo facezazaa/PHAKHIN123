@@ -12,8 +12,12 @@ st.header("🌳 Decision Tree สำหรับการทำนายโร�
 # -------------------------------
 # โหลดข้อมูล
 # -------------------------------
-file_path = os.path.join(os.path.dirname(__file__), "Data", "cirrhosis.csv")
-df = pd.read_csv(file_path)
+@st.cache_data
+def load_data():
+    return pd.read_csv("./Data/cirrhosis.csv")
+
+dt = load_data()
+
 st.subheader("👀 ข้อมูลตัวอย่าง")
 st.write(df.head(10))
 
