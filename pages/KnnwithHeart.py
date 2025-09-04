@@ -3,6 +3,7 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+import os
 
 st.set_page_config(page_title="Cirrhosis Survival Prediction", layout="wide")
 
@@ -13,7 +14,10 @@ st.title('🔮 การคาดการณ์อัตราการรอ�
 # -------------------------------
 @st.cache_data
 def load_data():
-    return pd.read_csv("./data/cirrhosis.csv")
+    # หา path โฟลเดอร์หลัก (root)
+    base_path = os.path.dirname(os.path.dirname(__file__))
+    file_path = os.path.join(base_path, "data", "cirrhosis.csv")
+    return pd.read_csv(file_path)
 
 dt = load_data()
 
@@ -60,7 +64,7 @@ if st.checkbox("✅ แสดง Pairplot (ใช้เวลาประมว�
 def preprocess(df):
     df2 = df.copy()
 
-    # จัดการ categorical ก่อน
+    # จัดการ categorical
     for col in df2.columns:
         if df2[col].dtype == "object":
             df2[col] = df2[col].astype("category")
@@ -107,7 +111,7 @@ prob = model.predict_proba(x_input_proc)[0]
 
 if prediction == 1:   # สมมติ 1 = รอดชีวิต
     st.success(f"✅ ผู้ป่วยมีโอกาสรอดชีวิตสูง (ความมั่นใจ {prob[1]*100:.2f}%)")
-    st.image("./img/12.jpg", width=300)
+    st.image(os.path.join(os.path.dirname(os.path.dirname(__file__)), "img", "12.jpg"), width=300)
 else:
     st.error(f"⚠️ ผู้ป่วยมีความเสี่ยงสูงต่อการเสียชีวิต (ความมั่นใจ {prob[0]*100:.2f}%)")
-    st.image("./img/13.jpg", width=300)
+    st.image(os.path.join(os.path.dirname(os.path.dirname(__file__)), "img", "13.jpg"), width=300)
